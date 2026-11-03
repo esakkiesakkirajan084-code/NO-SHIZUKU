@@ -20,9 +20,6 @@ jobs:
         distribution: 'temurin'
         java-version: '17'
 
-    - name: Setup Gradle
-      uses: gradle/actions/setup-gradle@v3
-
     - name: Extract, Fix & Build APK
       run: |
         echo "Extracting project..."
@@ -36,7 +33,7 @@ jobs:
         echo "Project located at: $PROJECT_DIR"
         cd "$PROJECT_DIR"
         
-        # Fully rewrite app/build.gradle.kts to remove all version catalog dependencies
+        # Rewrite app/build.gradle.kts safely
         if [ -f "app/build.gradle.kts" ]; then
           cat << 'EOF' > app/build.gradle.kts
         plugins {
@@ -83,7 +80,6 @@ jobs:
             implementation("com.google.android.material:material:1.11.0")
             implementation("androidx.constraintlayout:constraintlayout:2.1.4")
             
-            // Room components
             val roomVersion = "2.6.1"
             implementation("androidx.room:room-runtime:$roomVersion")
             implementation("androidx.room:room-ktx:$roomVersion")
@@ -92,7 +88,7 @@ jobs:
         EOF
         fi
 
-        # Write clean root build.gradle.kts
+        # Write clean root build.gradle.kts with AGP 8.2.0
         cat << 'EOF' > build.gradle.kts
         plugins {
             id("com.android.application") version "8.2.0" apply false
@@ -101,7 +97,7 @@ jobs:
         }
         EOF
 
-        # Write clean settings.gradle.kts
+        # Write settings.gradle.kts
         cat << 'EOF' > settings.gradle.kts
         pluginManagement {
             repositories {
@@ -121,8 +117,8 @@ jobs:
         include(":app")
         EOF
 
-        # Build execution
-        gradle wrapper
+        # Force Gradle 8.5 wrapper to avoid Gradle 9 incompatibility crashes
+        gradle wrapper --gradle-version 8.5
         ./gradlew assembleDebug
 
     - name: Upload APK Artifact
