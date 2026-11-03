@@ -23,18 +23,26 @@ jobs:
     - name: Setup Gradle
       uses: gradle/actions/setup-gradle@v3
 
-    - name: Unzip & Build APK
+    - name: Extract Project and Build
       run: |
-        echo "Extracting project files..."
+        echo "Extracting SentinelGuard.zip..."
         if [ -f "SentinelGuard.zip" ]; then
           unzip -q SentinelGuard.zip
+        else
+          echo "Error: SentinelGuard.zip not found at repository root!"
+          exit 1
         fi
         
-        # Find directory containing build.gradle.kts
+        # Locate the directory containing build.gradle.kts inside the extracted files
         BUILD_FILE=$(find . -name "build.gradle.kts" -not -path "*/.*" -print -quit)
-        PROJECT_DIR=$(dirname "$BUILD_FILE")
+        if [ -z "$BUILD_FILE" ]; then
+          echo "Error: build.gradle.kts could not be found after extraction!"
+          exit 1
+        fi
         
-        echo "Building from directory: $PROJECT_DIR"
+        PROJECT_DIR=$(dirname "$BUILD_FILE")
+        echo "Found project directory at: $PROJECT_DIR"
+        
         cd "$PROJECT_DIR"
         gradle wrapper
         ./gradlew assembleDebug
