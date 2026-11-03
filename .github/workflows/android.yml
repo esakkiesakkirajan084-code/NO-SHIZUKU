@@ -23,27 +23,57 @@ jobs:
     - name: Setup Gradle
       uses: gradle/actions/setup-gradle@v3
 
-    - name: Extract Project and Build
+    - name: Unzip, Patch & Build APK
       run: |
-        echo "Extracting SentinelGuard.zip..."
+        echo "Extracting project..."
         if [ -f "SentinelGuard.zip" ]; then
           unzip -q SentinelGuard.zip
         else
-          echo "Error: SentinelGuard.zip not found at repository root!"
+          echo "Error: SentinelGuard.zip not found!"
           exit 1
         fi
         
-        # Locate the directory containing build.gradle.kts inside the extracted files
+        # Locate project directory
         BUILD_FILE=$(find . -name "build.gradle.kts" -not -path "*/.*" -print -quit)
-        if [ -z "$BUILD_FILE" ]; then
-          echo "Error: build.gradle.kts could not be found after extraction!"
-          exit 1
-        fi
-        
         PROJECT_DIR=$(dirname "$BUILD_FILE")
-        echo "Found project directory at: $PROJECT_DIR"
-        
+        echo "Project located at: $PROJECT_DIR"
         cd "$PROJECT_DIR"
+        
+        # Patch root build.gradle.kts to avoid version catalog dependency errors
+        if [ -f "build.gradle.kts" ]; then
+          echo "Patching build.gradle.kts plugins..."
+          cat << 'EOF' > build.gradle.kts
+        plugins {
+            id("com.android.application") version "8.2.0" apply false
+            id("org.jetbrains.kotlin.android") version "1.9.0" apply false
+            id("com.google.devtools.ksp") version "1.9.0-1.0.13" apply false
+        }
+        EOF
+        fi
+
+        # Ensure settings.gradle.kts is clean
+        if [ -f "settings.gradle.kts" ]; then
+          cat << 'EOF' > settings.gradle.kts
+        pluginManagement {
+            repositories {
+                google()
+                mavenCentral()
+                gradlePluginPortal()
+            }
+        }
+        dependencyResolutionManagement {
+            repositoriesMode.set(RepositoriesMode.FAIL_ON_PROJECT_REPOS)
+            repositories {
+                google()
+                mavenCentral()
+            }
+        }
+        rootProject.name = "SentinelGuard"
+        include(":app")
+        EOF
+        fi
+
+        # Build execution
         gradle wrapper
         ./gradlew assembleDebug
 
