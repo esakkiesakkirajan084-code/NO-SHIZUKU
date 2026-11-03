@@ -23,14 +23,19 @@ jobs:
     - name: Setup Gradle
       uses: gradle/actions/setup-gradle@v3
 
-    - name: Generate Gradle Wrapper
-      run: gradle wrapper
-
-    - name: Build Debug APK
-      run: ./gradlew assembleDebug
+    - name: Build APK Automatically
+      run: |
+        # Automatically find the folder containing your project files
+        PROJECT_DIR=$(dirname "$(find . -name "settings.gradle.kts" -print -quit)")
+        echo "Found project folder at: $PROJECT_DIR"
+        cd "$PROJECT_DIR"
+        
+        # Generate wrapper and build debug APK
+        gradle wrapper
+        ./gradlew assembleDebug
 
     - name: Upload APK Artifact
       uses: actions/upload-artifact@v4
       with:
         name: app-debug
-        path: app/build/outputs/apk/debug/app-debug.apk
+        path: '**/build/outputs/apk/debug/app-debug.apk'
