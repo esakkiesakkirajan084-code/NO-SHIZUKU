@@ -20,6 +20,7 @@ jobs:
         distribution: 'temurin'
         java-version: '17'
         cache: 'gradle'
+        cache-dependency-path: 'SentinelGuard/**/*.gradle*'
 
     - name: Grant execute permission for gradlew
       run: chmod +x gradlew
